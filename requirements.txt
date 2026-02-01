@@ -1,0 +1,3 @@
+st-supabase-connection
+pandas
+plotly
