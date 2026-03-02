@@ -37,9 +37,12 @@ st.markdown("""
     }
     .timer-digits { font-family: 'Monaco', monospace; color: #00E5FF; font-size: 28px; font-weight: bold; }
 
-    /* Checkmark Animation */
-    @keyframes check { from { transform: scale(0); } to { transform: scale(1.2); } }
-    .success-badge { color: #4CAF50; font-size: 18px; animation: check 0.3s ease-in-out; font-weight: bold; }
+    /* Custom Checkmark Badge */
+    .success-badge { 
+        background-color: #1B5E20; color: white; padding: 5px 15px; 
+        border-radius: 20px; font-size: 14px; font-weight: bold;
+        display: inline-block; margin-top: 10px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -65,11 +68,14 @@ if not st.session_state['auth']:
 user = st.session_state['user']
 page = st.sidebar.radio("Navigation", ["⚡ Check-In", "🏆 Scoreboard", "📊 Trends", "⚙️ Admin"])
 
-# Data Fetch
-res = conn.table("daily_logs").select("*").execute()
-df = pd.DataFrame(res.data) if res.data else pd.DataFrame()
-if not df.empty: 
-    df['log_date'] = pd.to_datetime(df['log_date']).dt.date
+# Data Fetch with Safety Catch
+try:
+    res = conn.table("daily_logs").select("*").execute()
+    df = pd.DataFrame(res.data) if res.data else pd.DataFrame()
+    if not df.empty: 
+        df['log_date'] = pd.to_datetime(df['log_date']).dt.date
+except:
+    df = pd.DataFrame()
 
 # --- PAGE 1: CHECK-IN ---
 if page == "⚡ Check-In":
@@ -85,9 +91,9 @@ if page == "⚡ Check-In":
 
     today = st.date_input("Workout Date", today_cst)
     
-    mode = st.pills("Log Type", ["Workout", "Grace"], index=0)
-    if mode: 
-        st.markdown('<div class="success-badge">✅ Type Selected</div>', unsafe_allow_html=True)
+    # FIXED: Replaced st.pills with st.radio for stability
+    mode = st.radio("Log Type", ["Workout", "Grace"], horizontal=True)
+    st.markdown('<div class="success-badge">✅ Type Selected</div>', unsafe_allow_html=True)
 
     points = 0
     e_type = "exercise"
@@ -101,7 +107,7 @@ if page == "⚡ Check-In":
             points = 20 if "+20" in opt else 0
             e_type = "sunday_bonus" if points == 20 else "sunday_free"
         else:
-            run = st.select_slider("Run Duration", options=[0, 10, 15, 20], value=0)
+            run = st.select_slider("Run Duration (Minutes)", options=[0, 10, 15, 20], value=0)
             c1, c2 = st.columns(2)
             with c1: strength = st.toggle("Strength (+15)")
             with c2: labor = st.toggle("Labor (+10)")
@@ -115,6 +121,7 @@ if page == "⚡ Check-In":
             conn.table("daily_logs").insert({"participant_name": user, "log_date": str(today), "points": points, "entry_type": e_type}).execute()
             st.balloons()
             st.success("Data Sent!")
+            st.rerun()
         except: 
             st.error("Entry already exists for this date.")
 
@@ -122,7 +129,12 @@ if page == "⚡ Check-In":
 elif page == "🏆 Scoreboard":
     st.title("The Standings")
     month_start = today_cst.replace(day=1)
-    active_range = [d.date() for d in pd.date_range(start=month_start, end=today_cst - datetime.timedelta(days=1)) if d.strftime('%A') != 'Sunday']
+    
+    # Range of dates to check for penalties
+    if today_cst > month_start:
+        active_range = [d.date() for d in pd.date_range(start=month_start, end=today_cst - datetime.timedelta(days=1)) if d.strftime('%A') != 'Sunday']
+    else:
+        active_range = []
     
     summary = []
     for d in ["Damien", "Jesse", "Lyndon", "Todd"]:
@@ -151,7 +163,7 @@ elif page == "📊 Trends":
         fig = px.line(df_sort, x='log_date', y='Cumulative Points', color='participant_name', markers=True, template="plotly_dark")
         st.plotly_chart(fig, use_container_width=True)
     else:
-        st.info("No data for March yet.")
+        st.info("No data for March yet. Get to work!")
 
 # --- PAGE 4: ADMIN ---
 elif page == "⚙️ Admin":
@@ -160,3 +172,4 @@ elif page == "⚙️ Admin":
         if st.button("RESET MONTHLY BOARD"):
             conn.table("daily_logs").delete().neq("participant_name", "nobody").execute()
             st.success("Wiped!")
+            st.rerun()
