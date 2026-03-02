@@ -1,3 +1,4 @@
 st-supabase-connection
 pandas
 plotly
+pytz
