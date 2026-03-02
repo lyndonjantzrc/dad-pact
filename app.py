@@ -15,16 +15,41 @@ def get_now_central():
 now_cst = get_now_central()
 today_cst = now_cst.date()
 
-# --- HIGH CONTRAST BUTTON STYLING ---
+# --- THE ULTIMATE HIGH-CONTRAST CSS ---
 st.markdown("""
 <style>
-    /* Dark Base */
+    /* 1. GLOBAL DARK THEME */
     .stApp { background-color: #0B0E11; color: #FFFFFF; }
-    h1, h2, h3, p, span, label { color: #FFFFFF !important; font-weight: 600 !important; }
     
-    /* LOGIN BUTTON (Electric Blue) */
+    /* 2. SIDEBAR NAVIGATION STYLING */
+    [data-testid="stSidebar"] {
+        background-color: #161B22 !important;
+        border-right: 1px solid #30363D;
+    }
+    /* Sidebar Text & Radio Buttons */
+    [data-testid="stSidebar"] .st-emotion-cache-17l243g, 
+    [data-testid="stSidebar"] p, 
+    [data-testid="stSidebar"] span {
+        color: #FFFFFF !important;
+        font-weight: 800 !important;
+        font-size: 1.1rem !important;
+    }
+    /* Highlight the selected menu item */
+    [data-testid="stSidebar"] div[role="radiogroup"] label[data-baseweb="radio"] {
+        background: #21262D;
+        margin-top: 5px;
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid #30363D;
+    }
+    [data-testid="stSidebar"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) {
+        background: #1F6FEB !important;
+        border: 1px solid #58A6FF !important;
+    }
+
+    /* 3. BUTTON OVERHAUL */
     div.stButton > button:first-child {
-        background: linear-gradient(90deg, #007BFF, #0056b3);
+        background: linear-gradient(90deg, #1F6FEB, #1158C7);
         color: #FFFFFF !important;
         border: 2px solid #FFFFFF;
         border-radius: 12px;
@@ -33,37 +58,30 @@ st.markdown("""
         font-size: 20px !important;
         font-weight: 800 !important;
         text-transform: uppercase;
-        box-shadow: 0 4px 15px rgba(0, 123, 255, 0.4);
     }
 
-    /* SUBMIT BUTTON (Vibrant Green - specific to the Check-In page) */
-    div[data-testid="stSidebarNav"] + div div.stButton > button {
-        background: linear-gradient(90deg, #28A745, #1e7e34) !important;
-        border: 2px solid #FFFFFF !important;
+    /* 4. SCOREBOARD TABLE STYLING */
+    [data-testid="stDataFrame"] {
+        background-color: #161B22;
+        border-radius: 10px;
+        border: 1px solid #30363D;
     }
 
-    /* Banners at Bottom */
+    /* 5. BANNERS */
     .status-banner {
-        padding: 12px; border-radius: 10px; text-align: center;
-        font-weight: 800; font-size: 16px; margin: 5px 0;
-        text-transform: uppercase; letter-spacing: 1px;
+        padding: 15px; border-radius: 12px; text-align: center;
+        font-weight: 900; font-size: 18px; margin: 10px 0;
+        text-transform: uppercase; border: 2px solid #FFFFFF;
     }
-    .winner-bg { background: linear-gradient(90deg, #1B5E20, #4CAF50); border: 2px solid #FFFFFF; color: white; }
-    .loser-bg { background: linear-gradient(90deg, #B71C1C, #F44336); border: 2px solid #FFFFFF; color: white; }
+    .winner-bg { background: linear-gradient(90deg, #238636, #2EA043); color: white; box-shadow: 0 0 15px rgba(46, 160, 67, 0.4); }
+    .loser-bg { background: linear-gradient(90deg, #DA3633, #F85149); color: white; box-shadow: 0 0 15px rgba(248, 81, 73, 0.4); }
     
-    /* Timer Card */
+    /* 6. TIMER CARD */
     .timer-container {
         background: #1C2128; border: 2px solid #00E5FF;
         border-radius: 15px; padding: 15px; text-align: center; margin-bottom: 25px;
     }
-    .timer-digits { font-family: 'Monaco', monospace; color: #00E5FF; font-size: 32px; font-weight: bold; }
-
-    /* Success Badge */
-    .success-badge { 
-        background-color: #28A745; color: white; padding: 8px 20px; 
-        border-radius: 20px; font-size: 16px; font-weight: bold;
-        display: inline-block; margin-top: 10px; border: 1px solid white;
-    }
+    .timer-digits { font-family: 'Courier New', monospace; color: #00E5FF; font-size: 36px; font-weight: bold; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -75,7 +93,6 @@ if 'auth' not in st.session_state:
 
 if not st.session_state['auth']:
     st.title("🛡️ DAD PACT: SEASON 2")
-    st.subheader("Login Required")
     u_input = st.selectbox("Select Participant", ["Damien", "Jesse", "Lyndon", "Todd"])
     p_input = st.text_input("Enter Passcode", type="password")
     if st.button("🔓 UNLOCK APP"):
@@ -84,11 +101,13 @@ if not st.session_state['auth']:
             st.session_state['auth'], st.session_state['user'] = True, u_input
             st.rerun()
         else:
-            st.error("Access Denied: Check password")
+            st.error("Access Denied")
     st.stop()
 
 user = st.session_state['user']
-page = st.sidebar.radio("Navigation", ["⚡ Check-In", "🏆 Scoreboard", "📊 Trends", "⚙️ Admin"])
+
+# Updated Sidebar Menu Labels
+page = st.sidebar.radio("MAIN MENU", ["⚡ LOG WORKOUT", "🏆 LEADERBOARD", "📊 PROGRESS", "⚙️ SYSTEM ADMIN"])
 
 # Data Fetch
 try:
@@ -100,7 +119,7 @@ except:
     df = pd.DataFrame()
 
 # --- PAGE 1: CHECK-IN ---
-if page == "⚡ Check-In":
+if page == "⚡ LOG WORKOUT":
     st.title(f"Log Entry: {user}")
     
     # Timer Display
@@ -111,14 +130,13 @@ if page == "⚡ Check-In":
     
     st.markdown(f"""
     <div class="timer-container">
-        <div style="color:#8B949E; font-size:14px; font-weight:bold;">TIME REMAINING TODAY</div>
+        <div style="color:#8B949E; font-size:14px; font-weight:bold;">TIME REMAINING TODAY (CST)</div>
         <div class="timer-digits">{h:02d}:{m:02d}:{s:02d}</div>
     </div>
     """, unsafe_allow_html=True)
 
     today = st.date_input("Date", today_cst)
-    mode = st.radio("What are we doing?", ["Workout", "Grace"], horizontal=True)
-    st.markdown('<div class="success-badge">✅ TYPE SELECTED</div>', unsafe_allow_html=True)
+    mode = st.radio("Entry Type:", ["Workout", "Grace"], horizontal=True)
 
     points = 0
     e_type = "exercise"
@@ -128,7 +146,7 @@ if page == "⚡ Check-In":
     else:
         is_sun = today.strftime('%A') == 'Sunday'
         if is_sun:
-            opt = st.radio("Sunday Bonus Mode:", ["Rest Only (0 pts)", "Catch-up Bonus (+20 pts)"], horizontal=True)
+            opt = st.radio("Sunday Rest/Bonus:", ["Rest (0 pts)", "Bonus (+20 pts)"], horizontal=True)
             points = 20 if "+20" in opt else 0
             e_type = "sunday_bonus" if points == 20 else "sunday_free"
         else:
@@ -139,20 +157,20 @@ if page == "⚡ Check-In":
             points = min(30, run + (15 if strength else 0) + (10 if labor else 0))
 
     st.divider()
-    st.markdown(f"### Points Earned: <span style='color:#00E5FF; font-size:36px;'>{points}</span>", unsafe_allow_html=True)
+    st.markdown(f"### Points Earned: <span style='color:#00E5FF; font-size:40px;'>{points}</span>", unsafe_allow_html=True)
     
     if st.button("🚀 SUBMIT ENTRY"):
         try:
             conn.table("daily_logs").insert({"participant_name": user, "log_date": str(today), "points": points, "entry_type": e_type}).execute()
             st.balloons()
-            st.success("Log Saved Successfully!")
+            st.success("Entry Secured!")
             st.rerun()
         except: 
-            st.error("An entry already exists for this date.")
+            st.error("Date already logged.")
 
 # --- PAGE 2: SCOREBOARD ---
-elif page == "🏆 Scoreboard":
-    st.title("Current Standings")
+elif page == "🏆 LEADERBOARD":
+    st.title("Monthly Standings")
     month_start = today_cst.replace(day=1)
     
     if today_cst > month_start:
@@ -166,34 +184,37 @@ elif page == "🏆 Scoreboard":
         logged_pts = d_logs['points'].sum()
         logged_dates = d_logs['log_date'].tolist() if not d_logs.empty else []
         missed_p = sum(1 for day in active_range if day not in logged_dates) * -15
-        summary.append({"Dad": d, "Pts": logged_pts, "Penalty": missed_p, "Total": logged_pts + missed_p})
+        summary.append({"Participant": d, "Base Pts": logged_pts, "Penalty": missed_p, "Total": logged_pts + missed_p})
     
     score_df = pd.DataFrame(summary).sort_values(by="Total", ascending=False).reset_index(drop=True)
-    st.dataframe(score_df, use_container_width=True, hide_index=True)
+    
+    # Modern High-Contrast Table
+    st.table(score_df)
     
     st.divider()
     if not score_df.empty:
-        winner = score_df.iloc[0]['Dad']
-        loser = score_df.iloc[-1]['Dad']
-        st.markdown(f'<div class="status-banner winner-bg">👑 LEADER: {winner.upper()}</div>', unsafe_allow_html=True)
-        st.markdown(f'<div class="status-banner loser-bg">⚓ ANCHOR: {loser.upper()}</div>', unsafe_allow_html=True)
+        winner = score_df.iloc[0]['Participant']
+        loser = score_df.iloc[-1]['Participant']
+        st.markdown(f'<div class="status-banner winner-bg">🥇 CURRENT LEADER: {winner.upper()}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="status-banner loser-bg">⚓ CURRENT ANCHOR: {loser.upper()}</div>', unsafe_allow_html=True)
 
 # --- PAGE 3: TRENDS ---
-elif page == "📊 Trends":
-    st.title("Point Progress")
+elif page == "📊 PROGRESS":
+    st.title("Season Trends")
     if not df.empty:
         df_sort = df.sort_values('log_date')
         df_sort['Cumulative Points'] = df_sort.groupby('participant_name')['points'].transform(pd.Series.cumsum)
         fig = px.line(df_sort, x='log_date', y='Cumulative Points', color='participant_name', markers=True, template="plotly_dark")
+        fig.update_layout(font=dict(color="white"))
         st.plotly_chart(fig, use_container_width=True)
     else:
-        st.info("No data recorded for the current period.")
+        st.info("No logs found for March.")
 
 # --- PAGE 4: ADMIN ---
-elif page == "⚙️ Admin":
+elif page == "⚙️ SYSTEM ADMIN":
     if user == "Lyndon":
-        st.title("System Admin")
-        if st.button("⚠️ RESET SEASON DATA"):
+        st.title("Admin Controls")
+        if st.button("⚠️ WIPE ALL DATA"):
             conn.table("daily_logs").delete().neq("participant_name", "nobody").execute()
-            st.success("All logs cleared for the new month.")
+            st.success("Board Reset.")
             st.rerun()
