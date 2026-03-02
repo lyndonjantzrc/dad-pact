@@ -3,10 +3,10 @@ from st_supabase_connection import SupabaseConnection
 import pandas as pd
 import plotly.express as px
 import datetime
-import pytz  # For Central Time logic
+import pytz
 
 # --- CONFIG & TIMEZONE ---
-st.set_page_config(page_title="Dad Pact 2.0", layout="centered")
+st.set_page_config(page_title="Dad Pact PRO", layout="centered")
 central_tz = pytz.timezone('US/Central')
 
 def get_now_central():
@@ -15,40 +15,38 @@ def get_now_central():
 now_cst = get_now_central()
 today_cst = now_cst.date()
 
-# --- STYLING (The "Fun" Part) ---
+# --- ADVANCED UI STYLING ---
 st.markdown("""
 <style>
-    /* Dark Theme Base */
-    .stApp { background-color: #0E1117; color: #E0E0E0; }
+    /* Dark Base with High Contrast Text */
+    .stApp { background-color: #0B0E11; color: #FFFFFF; }
+    h1, h2, h3, p { color: #FFFFFF !important; text-shadow: 1px 1px 2px black; }
     
-    /* Winner/Loser Banners */
-    .winner-box { 
-        background: linear-gradient(90deg, #2E7D32, #43A047); 
-        color: white; padding: 20px; border-radius: 15px; 
-        text-align: center; font-weight: bold; font-size: 24px;
-        margin-bottom: 10px; border: 2px solid #A5D6A7;
+    /* Winner/Loser Banners (Smaller & Bottom Aligned) */
+    .status-banner {
+        padding: 12px; border-radius: 10px; text-align: center;
+        font-weight: 800; font-size: 16px; margin: 5px 0;
+        text-transform: uppercase; letter-spacing: 1px;
     }
-    .loser-box { 
-        background: linear-gradient(90deg, #C62828, #E53935); 
-        color: white; padding: 20px; border-radius: 15px; 
-        text-align: center; font-weight: bold; font-size: 24px;
-        margin-top: 10px; border: 2px solid #EF9A9A;
-    }
+    .winner-bg { background: linear-gradient(90deg, #1B5E20, #4CAF50); border: 1px solid #C8E6C9; color: white; }
+    .loser-bg { background: linear-gradient(90deg, #B71C1C, #F44336); border: 1px solid #FFCDD2; color: white; }
     
-    /* Countdown Timer Style */
-    .timer-text { 
-        font-family: 'Courier New', Courier, monospace;
-        color: #FFB300; font-size: 22px; text-align: center;
-        background: #262730; padding: 10px; border-radius: 10px;
-        border: 1px solid #FFB300; margin-bottom: 20px;
+    /* Countdown Timer */
+    .timer-container {
+        background: #1C2128; border: 2px solid #00E5FF;
+        border-radius: 15px; padding: 15px; text-align: center; margin-bottom: 25px;
     }
+    .timer-digits { font-family: 'Monaco', monospace; color: #00E5FF; font-size: 28px; font-weight: bold; }
 
-    /* Custom Buttons */
-    div.stButton > button:first-child { 
-        background: #1E88E5; color: white; border-radius: 30px;
-        height: 3.5rem; width: 100%; border: none; font-size: 18px;
-    }
-    div.stButton > button:hover { background: #1565C0; border: none; }
+    /* Pill Selection Buttons */
+    .stSelectbox div[data-baseweb="select"] { border-radius: 20px; background-color: #1C2128; border: 1px solid #30363D; }
+    
+    /* Radio Button "Pills" Styling */
+    div[data-testid="stMarkdownContainer"] > p { font-weight: 600; font-size: 1.1rem; }
+    
+    /* Success Checkmark Animation */
+    @keyframes check { from { transform: scale(0); } to { transform: scale(1.2); } }
+    .success-badge { color: #4CAF50; font-size: 24px; animation: check 0.3s ease-in-out; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -58,20 +56,20 @@ conn = st.connection("supabase", type=SupabaseConnection)
 if 'auth' not in st.session_state: st.session_state['auth'] = False
 
 if not st.session_state['auth']:
-    st.title("🛡️ Dad Pact: Season 2")
-    u_input = st.selectbox("Identify yourself:", ["Damien", "Jesse", "Lyndon", "Todd"])
-    p_input = st.text_input("Access Code", type="password")
-    if st.button("AUTHENTICATE"):
+    st.title("🛡️ Dad Pact Access")
+    u_input = st.selectbox("Who is logging in?", ["Damien", "Jesse", "Lyndon", "Todd"])
+    p_input = st.text_input("Password", type="password")
+    if st.button("UNLOCK APP"):
         res = conn.table("participants").select("password").eq("name", u_input).execute()
         if res.data and str(res.data[0]['password']) == p_input:
             st.session_state['auth'], st.session_state['user'] = True, u_input
             st.rerun()
         else:
-            st.error("Invalid Code")
+            st.error("Access Denied")
     st.stop()
 
 user = st.session_state['user']
-page = st.sidebar.radio("Command Center", ["Log Activity", "Scoreboard", "Data Visuals", "Admin"])
+page = st.sidebar.radio("Navigation", ["⚡ Check-In", "🏆 Scoreboard", "📊 Trends", "⚙️ Admin"])
 
 # Data Fetch
 res = conn.table("daily_logs").select("*").execute()
@@ -80,52 +78,61 @@ if not df.empty:
     df['log_date'] = pd.to_datetime(df['log_date']).dt.date
 
 # --- PAGE 1: CHECK-IN ---
-if page == "Log Activity":
-    st.title(f"Welcome back, {user}")
+if page == "⚡ Check-In":
+    st.title(f"Ready, {user}?")
     
-    # COUNTDOWN TIMER LOGIC
+    # TIMER BOX
     midnight_cst = datetime.datetime.combine(today_cst + datetime.timedelta(days=1), datetime.time(0, 0), tzinfo=central_tz)
     time_left = midnight_cst - now_cst
-    hours, remainder = divmod(int(time_left.total_seconds()), 3600)
-    minutes, seconds = divmod(remainder, 60)
+    h, rem = divmod(int(time_left.total_seconds()), 3600)
+    m, s = divmod(rem, 60)
     
-    st.markdown(f"""<div class="timer-text">⏳ TIME UNTIL DEADLINE: {hours:02d}h {minutes:02d}m {seconds:02d}s</div>""", unsafe_allow_html=True)
+    st.markdown(f"""<div class="timer-container"><div style="color:#8B949E; font-size:12px;">TIME REMAINING</div><div class="timer-digits">{h:02d}:{m:02d}:{s:02d}</div></div>""", unsafe_allow_html=True)
 
-    today = st.date_input("Entry Date", today_cst)
-    is_sun = today.strftime('%A') == 'Sunday'
-    mode = st.radio("What's the play?", ["🔥 Workout", "🛡️ Grace Day"])
+    today = st.date_input("Workout Date", today_cst)
+    
+    # ENGAGING PILL SELECTION
+    col1, col2 = st.columns(2)
+    with col1:
+        mode = st.pills("Log Type", ["Workout", "Grace"], index=0)
+    with col2:
+        if mode: st.markdown('<div class="success-badge">✅ Selection Locked</div>', unsafe_allow_html=True)
 
-    if mode == "🛡️ Grace Day":
+    points = 0
+    e_type = "exercise"
+
+    if mode == "Grace":
         points, e_type = 0, "grace"
-    elif is_sun:
-        u_logs = df[df['participant_name'] == user] if not df.empty else pd.DataFrame()
-        month_start = today.replace(day=1)
-        used_bonus = len(u_logs[u_logs['entry_type'] == 'sunday_bonus'])
-        st.info(f"Sunday Bonus: {used_bonus}/2 used this month.")
-        opt = st.radio("Sunday Option:", ["Rest Day (0 pts)", "Bonus Catch-up (+20 pts)"])
-        points = 20 if "+20" in opt else 0
-        e_type = "sunday_bonus" if points == 20 else "sunday_free"
     else:
-        runs = {"None": 0, "10m (5pts)": 5, "15m (10pts)": 10, "20m (15pts)": 15}
-        run = st.selectbox("Run Duration:", list(runs.keys()))
-        strength = st.checkbox("Strength Training (+15)")
-        labor = st.checkbox("Manual Labor/Sports (+10)")
-        points = min(30, runs[run] + (15 if strength else 0) + (10 if labor else 0))
-        e_type = "exercise"
+        is_sun = today.strftime('%A') == 'Sunday'
+        if is_sun:
+            opt = st.radio("Sunday Slot:", ["Rest Day (0 pts)", "Bonus Catch-up (+20 pts)"], horizontal=True)
+            points = 20 if "+20" in opt else 0
+            e_type = "sunday_bonus" if points == 20 else "sunday_free"
+        else:
+            run = st.select_slider("Run Duration", options=[0, 10, 15, 20], value=0)
+            st.caption(f"Run Points: {run}")
+            
+            c1, c2 = st.columns(2)
+            with c1: strength = st.toggle("Strength Training (+15)")
+            with c2: labor = st.toggle("Labor/Sports (+10)")
+            
+            points = min(30, run + (15 if strength else 0) + (10 if labor else 0))
 
-    st.metric("Points to be Earned", points)
-    if st.button("LOCK IN ENTRY"):
+    st.divider()
+    st.markdown(f"### Total Earned: **{points} PTS**")
+    
+    if st.button("SUBMIT WORKOUT"):
         try:
             conn.table("daily_logs").insert({"participant_name": user, "log_date": str(today), "points": points, "entry_type": e_type}).execute()
-            st.success("Entry Secured!"); st.balloons()
-        except: st.error("Date already logged!")
+            st.balloons()
+            st.success("Data Sent to Database!")
+        except: st.error("Entry already exists for this date.")
 
 # --- PAGE 2: SCOREBOARD ---
-elif page == "Scoreboard":
-    st.title("🏆 Leaderboard")
+elif page == "🏆 Scoreboard":
+    st.title("The Standings")
     month_start = today_cst.replace(day=1)
-    
-    # Penalty calculation (only for Mon-Sat)
     active_range = [d.date() for d in pd.date_range(start=month_start, end=today_cst - datetime.timedelta(days=1)) if d.strftime('%A') != 'Sunday']
     
     summary = []
@@ -133,31 +140,20 @@ elif page == "Scoreboard":
         d_logs = df[df['participant_name'] == d] if not df.empty else pd.DataFrame()
         logged_pts = d_logs['points'].sum()
         logged_dates = d_logs['log_date'].tolist() if not d_logs.empty else []
-        missed_penalty = sum(1 for day in active_range if day not in logged_dates) * -15
-        summary.append({"Dad": d, "Logged": logged_pts, "Penalty": missed_penalty, "Total": logged_pts + missed_penalty})
+        missed_p = sum(1 for day in active_range if day not in logged_dates) * -15
+        summary.append({"Dad": d, "Pts": logged_pts, "Penalty": missed_p, "Total": logged_pts + missed_p})
     
     score_df = pd.DataFrame(summary).sort_values(by="Total", ascending=False).reset_index(drop=True)
     
-    # WINNER AND LOSER BANNERS
+    # CLEAN TABLE
+    st.dataframe(score_df, use_container_width=True, hide_index=True)
+    
+    # BOTTOM BANNERS
+    st.divider()
     winner = score_df.iloc[0]['Dad']
     loser = score_df.iloc[-1]['Dad']
-    
-    st.markdown(f"""<div class="winner-box">👑 CURRENT LEADER: {winner.upper()}</div>""", unsafe_allow_html=True)
-    st.table(score_df)
-    st.markdown(f"""<div class="loser-box">🤡 CURRENT LOSER: {loser.upper()}</div>""", unsafe_allow_html=True)
+    st.markdown(f'<div class="status-banner winner-bg">🥇 Leader: {winner}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="status-banner loser-bg">⚓ Anchor: {loser}</div>', unsafe_allow_html=True)
 
 # --- PAGE 3: STATS ---
-elif page == "Data Visuals":
-    st.header("📈 Growth Chart")
-    if not df.empty:
-        df_sort = df.sort_values('log_date')
-        df_sort['Cumulative Points'] = df_sort.groupby('participant_name')['points'].transform(pd.Series.cumsum)
-        fig = px.line(df_sort, x='log_date', y='Cumulative Points', color='participant_name', markers=True, template="plotly_dark")
-        st.plotly_chart(fig, use_container_width=True)
-
-# --- PAGE 4: ADMIN ---
-elif page == "Admin":
-    if user == "Lyndon":
-        if st.button("RESET SEASON (WIPE ALL DATA)"):
-            conn.table("daily_logs").delete().neq("participant_name", "nobody").execute()
-            st.success("Board Reset for the new month!")
+elif page ==
